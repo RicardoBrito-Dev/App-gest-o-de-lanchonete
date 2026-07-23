@@ -101,6 +101,8 @@ export interface AppState {
   selectedPayment: PaymentMethod;
   currentPage: string;
   selectedMesa: number | null;
+  soundEnabled: boolean;
+  soundVolume: number;
 }
 
 export const DEFAULT_MENU: MenuItem[] = [

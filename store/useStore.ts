@@ -11,6 +11,7 @@ import {
   Cliente, Lancamento, PaymentMethod, ItemSale, DEFAULT_MENU,
 } from '@/lib/data';
 import { nowTimeStr } from '@/lib/utils';
+import { playOrderChime } from '@/lib/sound';
 
 function buildInitialState(): AppState {
   return {
@@ -44,6 +45,8 @@ function buildInitialState(): AppState {
     selectedPayment: 'dinheiro',
     currentPage: 'dashboard',
     selectedMesa: null,
+    soundEnabled: true,
+    soundVolume: 0.8,
   };
 }
 
@@ -53,6 +56,11 @@ interface StoreActions {
   setSelectedMesa: (id: number | null) => void;
   setSelectedPayment: (method: PaymentMethod) => void;
   setSelectedComanda: (mesaId: number, comandaId: number) => void;
+
+  // Sound Config
+  setSoundEnabled: (enabled: boolean) => void;
+  setSoundVolume: (volume: number) => void;
+  triggerOrderSound: () => void;
 
   // Delivery cart
   addToDeliveryCart: (item: MenuItem) => void;
@@ -105,6 +113,16 @@ export const useStore = create<Store>()(
   persist(
     (set, get) => ({
       ...buildInitialState(),
+
+      // ── Sound Config ────────────────────────────────────
+      setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
+      setSoundVolume: (volume) => set({ soundVolume: volume }),
+      triggerOrderSound: () => {
+        const s = get();
+        if (s.soundEnabled && s.soundVolume > 0) {
+          playOrderChime(s.soundVolume);
+        }
+      },
 
       // ── Navigation ──────────────────────────────────────
       setCurrentPage: (page) => set({ currentPage: page }),
@@ -200,6 +218,7 @@ export const useStore = create<Store>()(
         });
         get().upsertCliente({ nome: cliente, telefone, endereco });
         get().syncKitchen();
+        get().triggerOrderSound();
         return order;
       },
 
@@ -227,11 +246,13 @@ export const useStore = create<Store>()(
         get().syncKitchen();
       },
 
-      injectOnlineOrder: (order, counter) =>
+      injectOnlineOrder: (order, counter) => {
         set((s) => ({
           deliveryOrders: [...s.deliveryOrders, order],
           deliveryCounter: counter,
-        })),
+        }));
+        get().triggerOrderSound();
+      },
 
       // ── Mesas ────────────────────────────────────────────
       openComanda: (mesaId, nome, pessoas) => {
