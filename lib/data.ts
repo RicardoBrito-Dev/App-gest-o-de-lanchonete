@@ -33,7 +33,7 @@ export interface Mesa {
   comandas: Comanda[];
 }
 
-export type DeliveryStatus = 'recebido' | 'preparando' | 'saiu' | 'entregue';
+export type DeliveryStatus = 'recebido' | 'preparando' | 'pronto' | 'saiu' | 'entregue';
 
 export interface DeliveryOrder {
   id: number;
@@ -82,6 +82,39 @@ export interface ItemSale {
 
 export type PaymentMethod = 'dinheiro' | 'cartao' | 'pix';
 
+export type UserRole = 'admin' | 'caixa' | 'cozinha' | 'garcom';
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  role: UserRole;
+  email: string;
+  avatar: string;
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, { label: string; allowedPages: string[]; defaultPage: string }> = {
+  admin: {
+    label: 'Administrador',
+    allowedPages: ['dashboard', 'delivery', 'mesas', 'caixa', 'clientes', 'cardapio', 'relatorios'],
+    defaultPage: 'dashboard',
+  },
+  caixa: {
+    label: 'Operador de Caixa',
+    allowedPages: ['delivery', 'mesas', 'caixa', 'clientes'],
+    defaultPage: 'delivery',
+  },
+  garcom: {
+    label: 'Garçom / Atendente',
+    allowedPages: ['mesas', 'cardapio'],
+    defaultPage: 'mesas',
+  },
+  cozinha: {
+    label: 'Cozinha (KDS)',
+    allowedPages: ['delivery'],
+    defaultPage: 'delivery',
+  },
+};
+
 export interface AppState {
   menu: MenuItem[];
   menuCounter: number;
@@ -103,6 +136,8 @@ export interface AppState {
   selectedMesa: number | null;
   soundEnabled: boolean;
   soundVolume: number;
+  user: UserProfile | null;
+  isAuthenticated: boolean;
 }
 
 export const DEFAULT_MENU: MenuItem[] = [
@@ -138,22 +173,35 @@ export const CAT_LABELS: Record<string, string> = {
 };
 
 export const STATUS_LABELS: Record<string, string> = {
-  recebido: '⏳ Recebido',
-  preparando: '🔥 Preparando',
-  saiu: '🛵 Saiu',
-  entregue: '✅ Entregue',
+  recebido:   '⏳ Recebido',
+  preparando: '🔥 Em Preparo',
+  pronto:     '✅ Pronto na Cozinha',
+  saiu:       '🛵 Saiu p/ Entrega',
+  entregue:   '🎉 Entregue',
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  recebido: '#f39c12',
+  recebido:   '#f39c12',
   preparando: '#e74c3c',
-  saiu: '#4f8ef7',
-  entregue: '#2ecc71',
+  pronto:     '#2ecc71',
+  saiu:       '#4f8ef7',
+  entregue:   '#27ae60',
 };
 
+// Next action labels shown on the Kanban advance button (admin delivery page)
 export const KANBAN_NEXT_LABEL: Record<string, string | null> = {
-  recebido: '🔥 Preparar',
-  preparando: '🛵 Saiu',
-  saiu: '✅ Entregue',
-  entregue: null,
+  recebido:   '🔥 Iniciar Preparo',
+  preparando: '✅ Pronto',
+  pronto:     '🛵 Saiu p/ Entrega',
+  saiu:       '🎉 Entregue',
+  entregue:   null,
+};
+
+// Labels shown on the kitchen "mark ready" button — only up to 'pronto'
+export const KITCHEN_NEXT_LABEL: Record<string, string | null> = {
+  recebido:   '🔥 Iniciar Preparo',
+  preparando: '✅ Pronto!',
+  pronto:     null,
+  saiu:       null,
+  entregue:   null,
 };

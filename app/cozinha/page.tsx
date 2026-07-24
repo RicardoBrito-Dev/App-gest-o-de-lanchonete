@@ -6,6 +6,7 @@ interface DeliveryOrder {
   id: number;
   cliente: string;
   endereco: string;
+  status: string;
   items: Array<{ qty: number; emoji: string; name: string }>;
   observacoes?: string;
   createdAt: number;
@@ -50,7 +51,11 @@ export default function CozinhaPage() {
       if (stateRaw) {
         const parsed = JSON.parse(stateRaw);
         const stateObj = parsed?.state || parsed;
-        setDeliveryOrders((stateObj.deliveryOrders || []).filter((o: any) => o.status === 'preparando' || o.status === 'recebido'));
+        // Cozinha só mostra pedidos que ainda precisam ser preparados (recebido + preparando)
+        // 'pronto' já foi confirmado pela cozinha, o caixa cuida do resto
+        setDeliveryOrders((stateObj.deliveryOrders || []).filter(
+          (o: any) => o.status === 'recebido' || o.status === 'preparando',
+        ));
         setMesas((stateObj.mesas || []).filter((m: any) => m.status === 'occupied'));
         setLastUpdate('Atualizado agora');
       }
@@ -70,17 +75,47 @@ export default function CozinhaPage() {
       const parsed = JSON.parse(raw);
       const stateObj = parsed?.state || parsed;
       const order = stateObj.deliveryOrders?.find((o: any) => o.id === id);
-      if (order) {
-        if (order.status === 'recebido') order.status = 'preparando';
-        else if (order.status === 'preparando') order.status = 'saiu';
-        if (parsed?.state) {
-          parsed.state = stateObj;
-          localStorage.setItem('plp_state', JSON.stringify(parsed));
-        } else {
-          localStorage.setItem('plp_state', JSON.stringify(stateObj));
-        }
-        loadData();
+      if (!order) return;
+
+      // Kitchen can only advance up to 'pronto'
+      if (order.status === 'recebido') order.status = 'preparando';
+      else if (order.status === 'preparando') order.status = 'pronto';
+      else return; // 'pronto' and beyond are handled by the cashier
+
+      // Save updated state back
+      if (parsed?.state) {
+        parsed.state = stateObj;
+        localStorage.setItem('plp_state', JSON.stringify(parsed));
+      } else {
+        localStorage.setItem('plp_state', JSON.stringify(stateObj));
       }
+
+      // Sync plp_kitchen — filter out 'pronto' orders so they disappear from kitchen view
+      const activeDelivery = (stateObj.deliveryOrders || []).filter(
+        (o: any) => o.status === 'recebido' || o.status === 'preparando',
+      );
+      const activeMesas = (stateObj.mesas || [])
+        .filter((m: any) => m.comandas && m.comandas.length > 0)
+        .flatMap((m: any) =>
+          m.comandas.map((c: any) => ({
+            id: m.id,
+            comandaId: c.id,
+            cliente: `${c.nome} (Mesa ${m.id})`,
+            items: c.items,
+            openTime: c.openTime,
+          })),
+        );
+
+      localStorage.setItem(
+        'plp_kitchen',
+        JSON.stringify({
+          timestamp: Date.now(),
+          deliveryOrders: activeDelivery,
+          mesas: activeMesas,
+        }),
+      );
+
+      loadData();
     } catch {}
   };
 
@@ -277,11 +312,17 @@ export default function CozinhaPage() {
                   )}
 
                   <button
-                    className="btn btn-green"
-                    style={{ width: '100%', justifyContent: 'center', padding: '11px', fontWeight: 800 }}
+                    className={`btn ${o.status === 'preparando' ? 'btn-green' : 'btn-secondary'}`}
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '11px',
+                      fontWeight: 800,
+                      fontSize: o.status === 'preparando' ? '1rem' : '0.9rem',
+                    }}
                     onClick={() => markReady(o.id)}
                   >
-                    ✅ Avançar / Pronto
+                    {o.status === 'recebido' ? '🔥 Iniciar Preparo' : '✅ Pronto! Avisar Caixa'}
                   </button>
                 </div>
               );

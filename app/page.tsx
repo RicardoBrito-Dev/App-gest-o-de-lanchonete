@@ -12,16 +12,27 @@ import ClientesPage from '@/components/admin/ClientesPage';
 import CardapioPage from '@/components/admin/CardapioPage';
 import RelatoriosPage from '@/components/admin/RelatoriosPage';
 import Toast from '@/components/shared/Toast';
-import { DeliveryOrder } from '@/lib/data';
+import LoginPage from '@/components/auth/LoginPage';
+import { DeliveryOrder, ROLE_PERMISSIONS } from '@/lib/data';
 
 export default function AdminHome() {
-  const { currentPage, deliveryOrders, deliveryCounter, injectOnlineOrder, loadDemoData } = useStore();
+  const { currentPage, setCurrentPage, deliveryOrders, deliveryCounter, injectOnlineOrder, loadDemoData, isAuthenticated, user } = useStore();
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
     loadDemoData();
   }, [loadDemoData]);
+
+  // Page Permission Enforcement
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const perm = ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.admin;
+      if (!perm.allowedPages.includes(currentPage)) {
+        setCurrentPage(perm.defaultPage);
+      }
+    }
+  }, [isAuthenticated, user, currentPage, setCurrentPage]);
 
   // Poll for online orders every 3 seconds
   const checkOnlineOrders = useCallback(() => {
@@ -53,6 +64,16 @@ export default function AdminHome() {
           <div style={{ color: 'var(--primary)', fontWeight: 700, marginTop: 12 }}>Carregando...</div>
         </div>
       </div>
+    );
+  }
+
+  // Render Login screen if user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage />
+        <Toast />
+      </>
     );
   }
 

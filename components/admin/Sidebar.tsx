@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { ROLE_PERMISSIONS } from '@/lib/data';
 
 export default function Sidebar() {
-  const { currentPage, setCurrentPage, deliveryOrders, mesas, caixa } = useStore();
+  const { currentPage, setCurrentPage, deliveryOrders, mesas, caixa, user, logout } = useStore();
   const [timeStr, setTimeStr] = useState('');
   const [dateStr, setDateStr] = useState('');
 
@@ -28,7 +29,11 @@ export default function Sidebar() {
   const activeDelivery = deliveryOrders.filter((o) => o.status !== 'entregue').length;
   const occupiedMesas = mesas.filter((m) => m.status === 'occupied').length;
 
-  const navItems = [
+  const allowedPages = user
+    ? ROLE_PERMISSIONS[user.role]?.allowedPages || ROLE_PERMISSIONS.admin.allowedPages
+    : ROLE_PERMISSIONS.admin.allowedPages;
+
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'delivery', label: 'Delivery', icon: '🛵', badge: activeDelivery },
     { id: 'mesas', label: 'Mesas', icon: '🍽️', badge: occupiedMesas },
@@ -37,6 +42,8 @@ export default function Sidebar() {
     { id: 'cardapio', label: 'Cardápio', icon: '🍕' },
     { id: 'relatorios', label: 'Relatórios', icon: '📈' },
   ];
+
+  const navItems = allNavItems.filter((item) => allowedPages.includes(item.id));
 
   return (
     <aside
@@ -134,12 +141,48 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom Clock & Links */}
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)' }}>
-        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '1px' }}>{timeStr || '--:--:--'}</div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '2px' }}>{dateStr || '...'}</div>
+      {/* Bottom User & Clock */}
+      <div style={{ padding: '16px 14px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)' }}>
+        {/* Logged User Info */}
+        {user && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+              padding: '8px 10px',
+              background: 'var(--card2)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>{user.avatar || '👤'}</span>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)' }}>{user.name}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--primary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  {user.role}
+                </div>
+              </div>
+            </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+            <button
+              type="button"
+              className="btn-icon danger"
+              onClick={logout}
+              title="Sair do Sistema"
+              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+            >
+              🚪 Sair
+            </button>
+          </div>
+        )}
+
+        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '1px' }}>{timeStr || '--:--:--'}</div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '2px' }}>{dateStr || '...'}</div>
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
           <a
             href="/cozinha"
             target="_blank"

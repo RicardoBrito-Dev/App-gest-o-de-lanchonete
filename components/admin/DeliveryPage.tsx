@@ -65,12 +65,14 @@ export default function DeliveryPage() {
 
   const totalCart = deliveryCart.reduce((acc, i) => acc + i.price * i.qty, 0);
 
-  const kanbanStatuses: Array<'recebido' | 'preparando' | 'saiu' | 'entregue'> = [
+  const activeStatuses: Array<'recebido' | 'preparando' | 'pronto' | 'saiu'> = [
     'recebido',
     'preparando',
+    'pronto',
     'saiu',
-    'entregue',
   ];
+
+  const entregueOrders = deliveryOrders.filter((o) => o.status === 'entregue');
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '24px' }}>
@@ -126,36 +128,71 @@ export default function DeliveryPage() {
             <input
               type="text"
               className="input"
-              placeholder="Ex: sem cebola, troco para R$ 50"
+              placeholder="Sem cebola, troco para R$ 50, etc."
               value={obs}
               onChange={(e) => setObs(e.target.value)}
             />
           </div>
 
-          {/* Menu Selector */}
+          {/* Menu Item Quick Selector */}
           <div>
-            <label className="form-label">Adicionar Itens ao Pedido</label>
-            <div className="cat-tabs" style={{ marginBottom: '10px' }}>
-              {['all', 'pizzas', 'lanches', 'bebidas', 'sobremesas'].map((cat) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Cardápio</label>
+              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Clique para adicionar</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              {[
+                { id: 'all', label: 'Todos' },
+                { id: 'pizzas', label: '🍕 Pizzas' },
+                { id: 'lanches', label: '🍔 Lanches' },
+                { id: 'bebidas', label: '🥤 Bebidas' },
+                { id: 'sobremesas', label: '🍰 Sobremesas' },
+              ].map((cat) => (
                 <button
-                  key={cat}
+                  key={cat.id}
                   type="button"
-                  className={`cat-tab ${activeCat === cat ? 'active' : ''}`}
-                  onClick={() => setActiveCat(cat)}
-                  style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                  className={`cat-tab ${activeCat === cat.id ? 'active' : ''}`}
+                  onClick={() => setActiveCat(cat.id)}
+                  style={{ padding: '4px 9px', fontSize: '0.73rem', borderRadius: '6px' }}
                 >
-                  {cat === 'all' ? 'Todos' : cat}
+                  {cat.label}
                 </button>
               ))}
             </div>
 
-            <div className="menu-grid" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                gap: '8px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                padding: '4px',
+                background: 'var(--card2)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border)',
+              }}
+            >
               {filteredMenu.map((item) => (
-                <button key={item.id} type="button" className="menu-item-btn" onClick={() => addToDeliveryCart(item)}>
-                  <span className="menu-item-emoji">{item.emoji}</span>
-                  <span className="menu-item-name">{item.name}</span>
-                  <span className="menu-item-price">{fmt(item.price)}</span>
-                </button>
+                <div
+                  key={item.id}
+                  onClick={() => addToDeliveryCart(item)}
+                  style={{
+                    padding: '8px',
+                    background: 'var(--card)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>
+                    {item.emoji} {item.name}
+                  </div>
+                  <div style={{ color: 'var(--primary)', fontWeight: 800 }}>{fmt(item.price)}</div>
+                </div>
               ))}
             </div>
           </div>
@@ -213,82 +250,205 @@ export default function DeliveryPage() {
               Limpar
             </button>
             <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>
-              🛵 Concluir Pedido
+              🚀 Criar Pedido
             </button>
           </div>
         </form>
       </div>
 
-      {/* Kanban Board Column */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'start' }}>
-        {kanbanStatuses.map((status) => {
-          const orders = deliveryOrders.filter((o) => o.status === status);
-          const color = STATUS_COLORS[status];
+      {/* Right Column: Active Kanban Grid + Full-Width Entregues Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Active Kanban (4 Columns) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'start' }}>
+          {activeStatuses.map((status) => {
+            const orders = deliveryOrders.filter((o) => o.status === status);
+            const color = STATUS_COLORS[status];
 
-          return (
-            <div key={status} className="kanban-column">
-              <div className="kanban-column-header">
-                <div className="kanban-column-title">
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
-                  {STATUS_LABELS[status]}
+            return (
+              <div key={status} className={`kanban-column ${status === 'pronto' ? 'pronto' : ''}`}>
+                <div className="kanban-column-header">
+                  <div className="kanban-column-title">
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+                    {STATUS_LABELS[status]}
+                  </div>
+                  <span className="kanban-column-count">{orders.length}</span>
                 </div>
-                <span className="kanban-column-count">{orders.length}</span>
+
+                {orders.length === 0 ? (
+                  <div className="empty-state small" style={{ margin: 'auto 0' }}>
+                    Sem pedidos
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {orders.map((o) => {
+                      const nextLabel = KANBAN_NEXT_LABEL[o.status];
+                      const itemsSummary = o.items.map((i) => `${i.qty}x ${i.name}`).join(', ');
+                      return (
+                        <div
+                          key={o.id}
+                          className="kanban-card"
+                          style={{ '--card-accent': color } as React.CSSProperties}
+                          onClick={() => setSelectedOrder(o)}
+                        >
+                          <div className="kanban-card-header">
+                            <span className="kanban-card-id">{fmtId(o.id)}</span>
+                            <span className="kanban-card-time">⏱ {timeAgo(o.createdAt)}</span>
+                          </div>
+
+                          <div className="kanban-card-name">{o.cliente}</div>
+                          <div className="kanban-card-addr">
+                            <span>📍</span>
+                            <span style={{ flex: 1 }}>{o.endereco}</span>
+                          </div>
+
+                          <div className="kanban-card-items-box">
+                            {itemsSummary}
+                          </div>
+
+                          <div className="kanban-card-footer">
+                            <span className="kanban-card-total">{fmt(o.total)}</span>
+                            {nextLabel && (
+                              <button
+                                type="button"
+                                className="kanban-advance-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  advanceOrder(o.id);
+                                }}
+                              >
+                                {nextLabel}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            );
+          })}
+        </div>
 
-              {orders.length === 0 ? (
-                <div className="empty-state small" style={{ margin: 'auto 0' }}>
-                  Sem pedidos
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {orders.map((o) => {
-                    const nextLabel = KANBAN_NEXT_LABEL[o.status];
-                    const itemsSummary = o.items.map((i) => `${i.qty}x ${i.name}`).join(', ');
-                    return (
-                      <div
-                        key={o.id}
-                        className="kanban-card"
-                        style={{ '--card-accent': color } as React.CSSProperties}
-                        onClick={() => setSelectedOrder(o)}
-                      >
-                        <div className="kanban-card-header">
-                          <span className="kanban-card-id">{fmtId(o.id)}</span>
-                          <span className="kanban-card-time">⏱ {timeAgo(o.createdAt)}</span>
-                        </div>
-
-                        <div className="kanban-card-name">{o.cliente}</div>
-                        <div className="kanban-card-addr">
-                          <span>📍</span>
-                          <span style={{ flex: 1 }}>{o.endereco}</span>
-                        </div>
-
-                        <div className="kanban-card-items-box">
-                          {itemsSummary}
-                        </div>
-
-                        <div className="kanban-card-footer">
-                          <span className="kanban-card-total">{fmt(o.total)}</span>
-                          {nextLabel && (
-                            <button
-                              type="button"
-                              className="kanban-advance-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                advanceOrder(o.id);
-                              }}
-                            >
-                              {nextLabel}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+        {/* Section Entregues - Full Width Below Active Kanban */}
+        <div className="card" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              paddingBottom: '12px',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.4rem' }}>🎉</span>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Pedidos Entregues / Concluídos</h3>
+                <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                  Histórico de pedidos finalizados com sucesso
+                </span>
+              </div>
             </div>
-          );
-        })}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span
+                style={{
+                  background: 'rgba(39, 174, 96, 0.15)',
+                  color: 'var(--green)',
+                  border: '1px solid rgba(39, 174, 96, 0.3)',
+                  padding: '4px 12px',
+                  borderRadius: '99px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                }}
+              >
+                {entregueOrders.length} pedido(s) entregue(s)
+              </span>
+            </div>
+          </div>
+
+          {entregueOrders.length === 0 ? (
+            <div className="empty-state" style={{ padding: '32px 16px' }}>
+              Nenhum pedido entregue ainda hoje.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {entregueOrders.map((o) => {
+                const itemsSummary = o.items.map((i) => `${i.qty}x ${i.name}`).join(', ');
+                return (
+                  <div
+                    key={o.id}
+                    onClick={() => setSelectedOrder(o)}
+                    style={{
+                      background: 'var(--card2)',
+                      border: '1px solid rgba(39, 174, 96, 0.3)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="kanban-card-id">{fmtId(o.id)}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--green)', fontWeight: 700 }}>
+                        ✅ Entregue
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)' }}>
+                      {o.cliente}
+                    </div>
+
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'flex', gap: '4px' }}>
+                      <span>📍</span>
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {o.endereco}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--muted)',
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {itemsSummary}
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '4px',
+                        paddingTop: '8px',
+                        borderTop: '1px dashed var(--border)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                        ⏱ {timeAgo(o.createdAt)}
+                      </span>
+                      <span style={{ fontWeight: 800, color: 'var(--green)', fontSize: '0.95rem' }}>
+                        {fmt(o.total)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal Detalhes do Pedido */}

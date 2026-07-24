@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   AppState, MenuItem, CartItem, DeliveryOrder, Mesa, Comanda,
-  Cliente, Lancamento, PaymentMethod, ItemSale, DEFAULT_MENU,
+  Cliente, Lancamento, PaymentMethod, ItemSale, UserProfile, ROLE_PERMISSIONS, DEFAULT_MENU,
 } from '@/lib/data';
 import { nowTimeStr } from '@/lib/utils';
 import { playOrderChime } from '@/lib/sound';
@@ -47,10 +47,22 @@ function buildInitialState(): AppState {
     selectedMesa: null,
     soundEnabled: true,
     soundVolume: 0.8,
+    user: {
+      id: '1',
+      name: 'Gerente Admin',
+      role: 'admin',
+      email: 'admin@pizzalanche.com',
+      avatar: '👑',
+    },
+    isAuthenticated: true,
   };
 }
 
 interface StoreActions {
+  // Auth
+  login: (user: UserProfile) => void;
+  logout: () => void;
+
   // Navigation
   setCurrentPage: (page: string) => void;
   setSelectedMesa: (id: number | null) => void;
@@ -113,6 +125,13 @@ export const useStore = create<Store>()(
   persist(
     (set, get) => ({
       ...buildInitialState(),
+
+      // ── Auth ───────────────────────────────────────────
+      login: (user) => {
+        const perm = ROLE_PERMISSIONS[user.role] || ROLE_PERMISSIONS.admin;
+        set({ user, isAuthenticated: true, currentPage: perm.defaultPage });
+      },
+      logout: () => set({ isAuthenticated: false }),
 
       // ── Sound Config ────────────────────────────────────
       setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
@@ -224,7 +243,7 @@ export const useStore = create<Store>()(
 
       advanceOrder: (orderId) => {
         const s = get();
-        const statuses: DeliveryOrder['status'][] = ['recebido', 'preparando', 'saiu', 'entregue'];
+        const statuses: DeliveryOrder['status'][] = ['recebido', 'preparando', 'pronto', 'saiu', 'entregue'];
         const order = s.deliveryOrders.find((o) => o.id === orderId);
         if (!order) return;
         const idx = statuses.indexOf(order.status);

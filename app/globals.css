@@ -326,6 +326,16 @@ select.input option { background: var(--card2); }
   flex-direction: column;
   gap: 14px;
 }
+/* "Pronto na Cozinha" column glows green to alert cashier */
+.kanban-column.pronto {
+  border-color: rgba(46, 204, 113, 0.35);
+  background: rgba(46, 204, 113, 0.03);
+  animation: prontoColumnPulse 2.5s ease infinite;
+}
+@keyframes prontoColumnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+  50%       { box-shadow: 0 0 16px 4px rgba(46, 204, 113, 0.12); }
+}
 
 .kanban-column-header {
   display: flex;
